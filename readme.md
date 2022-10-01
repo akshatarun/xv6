@@ -37,7 +37,7 @@ Group Members :
 
 [Assignment 3](/assign3) : Implemented **lazy memory allocation**
 
-[Assignment 4](/assign4) : Video assignment (Individual, [Link](https://www.youtube.com/watch?v=5_Exv98s00k&feature=youtu.be))
+[Assignment 4](/assign4) : Video assignment (Individual, [Link]([https://www.youtube.com/watch?v=5_Exv98s00k&feature=youtu.be](https://youtu.be/svK4l9ClQvc)))
 
 ---
 
