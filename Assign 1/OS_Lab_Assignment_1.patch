@@ -1,0 +1,184 @@
+From 627bdee0834d02256fe403ec7ae0f0469bccc9dd Mon Sep 17 00:00:00 2001
+From: akshatarun <akshatarun17@gmail.com>
+Date: Fri, 20 Aug 2021 20:04:08 +0530
+Subject: [PATCH] Do assignment-1 Q1 & Q2
+
+---
+ Drawtest.c | 22 +++++++++++++++++++++
+ Makefile   |  2 ++
+ syscall.c  |  2 ++
+ syscall.h  |  1 +
+ sysproc.c  | 56 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ user.h     |  1 +
+ usys.S     |  1 +
+ 7 files changed, 85 insertions(+)
+ create mode 100644 Drawtest.c
+
+diff --git a/Drawtest.c b/Drawtest.c
+new file mode 100644
+index 0000000..e790bd8
+--- /dev/null
++++ b/Drawtest.c
+@@ -0,0 +1,22 @@
++#include "types.h"
++#include "stat.h"
++#include "user.h"
++
++int main(void) 
++{
++    //Declaring a character pointer to which 4000 bytes of memory is being allocated
++    char *buffer=malloc(4000);
++    //numOfChars is the number of chararcters in the ascii art image which will be returned by the draw system call
++    int numOfChars=draw((void *)buffer,(uint)4000);
++    if(numOfChars==-1){
++    //if number of characters is equal to -1 then either buffer size is less than the ascii art's size or tried to access some memory which was out of the address space of the process
++    	printf(1,"Error: Either buffer size is too low or memory access was out of the address space of the process\n");
++    }
++    else{
++    //printing the buffer using the printf defined in xv6
++    	printf(1,"%s\n\n",buffer);
++    }
++    //free the space allocated to the buffer
++    free(buffer);
++    exit();
++}
+diff --git a/Makefile b/Makefile
+index 09d790c..fb154a7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -181,6 +181,7 @@ UPROGS=\
+ 	_usertests\
+ 	_wc\
+ 	_zombie\
++	_Drawtest\
+ 
+ fs.img: mkfs README $(UPROGS)
+ 	./mkfs fs.img README $(UPROGS)
+@@ -250,6 +251,7 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
+ EXTRA=\
+ 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
+ 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
++	Drawtest.c\
+ 	printf.c umalloc.c\
+ 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
+ 	.gdbinit.tmpl gdbutil\
+diff --git a/syscall.c b/syscall.c
+index ee85261..d354acd 100644
+--- a/syscall.c
++++ b/syscall.c
+@@ -103,6 +103,7 @@ extern int sys_unlink(void);
+ extern int sys_wait(void);
+ extern int sys_write(void);
+ extern int sys_uptime(void);
++extern int sys_draw(void);
+ 
+ static int (*syscalls[])(void) = {
+ [SYS_fork]    sys_fork,
+@@ -126,6 +127,7 @@ static int (*syscalls[])(void) = {
+ [SYS_link]    sys_link,
+ [SYS_mkdir]   sys_mkdir,
+ [SYS_close]   sys_close,
++[SYS_draw]    sys_draw,
+ };
+ 
+ void
+diff --git a/syscall.h b/syscall.h
+index bc5f356..ecb6c3f 100644
+--- a/syscall.h
++++ b/syscall.h
+@@ -20,3 +20,4 @@
+ #define SYS_link   19
+ #define SYS_mkdir  20
+ #define SYS_close  21
++#define SYS_draw   22
+diff --git a/sysproc.c b/sysproc.c
+index 0686d29..adb6fb2 100644
+--- a/sysproc.c
++++ b/sysproc.c
+@@ -77,6 +77,62 @@ sys_sleep(void)
+   return 0;
+ }
+ 
++int
++sys_draw(void)
++{
++  //image is a char pointer which points to the ascii art image
++  char *image="	       	\t\t,ood8888booo,\n\
++                              ,od8           8bo,\n\
++                           ,od                   bo,\n\
++                         ,d8                       8b,\n\
++                        ,o                           o,    ,a8b\n\
++                       ,8                             8,,od8  8\n\
++                       8'                             d8'     8b\n\
++                       8                           d8'ba     aP'\n\
++                       Y,                       o8'         aP'\n\
++                        Y8,                      YaaaP'    ba\n\
++                         Y8o                   Y8'         88\n\
++                          `Y8               ,8\"           `P\n\
++                            Y8o        ,d8P'              ba\n\
++                       ooood8888888P\"\"\"'                  P'\n\
++                    ,od                                  8\n\
++                 ,dP     o88o                           o'\n\
++                ,dP          8                          8\n\
++               ,d'   oo       8                       ,8\n\
++               $    d$\"8      8           Y    Y  o   8\n\
++              d    d  d8    od  \"\"boooooooob   d\"\" 8   8\n\
++              $    8  d   ood' ,   8        b  8   '8  b\n\
++              $   $  8  8     d  d8        `b  d    '8  b\n\
++               $  $ 8   b    Y  d8          8 ,P     '8  b\n\
++               `$$  Yb  b     8b 8b         8 8,      '8  o,\n\
++                    `Y  b      8o  $$o      d  b        b   $o\n\
++                     8   '$     8$,,$\"      $   $o      '$o$$\n\
++                      $o$$P\"                 $$o$\n\n"; 
++
++   //buff will be the pointer which will be pointing to the address pointed by the input buffer pointer
++   //size will be the input argument's buffer's size
++   void *buff;
++   int size;
++   
++   //fetches the 1st 32 bit system call argument
++   if(argint(1, &size)<0){return -1;}
++   //fetches the 0th word size system call argument and returns -1 if tries to access adress location which is out of the address space of the process
++   if(argptr(0, (void *)&buff, sizeof(size)<0)){return -1;}
++   //Calculate the image size of the ascii art image
++   int imgSize=0;
++   for(;image[imgSize]!='\0';imgSize++){}
++   //If the buffer size is less than the ascii art image's size then return -1
++   if(size<imgSize){return -1;}
++   else{
++   //Else copy the ascii art image to the buffer
++   	for(int i=0;i<imgSize;i++){
++   	    ((char *)buff)[i]=image[i];
++   	}
++   	//return the image size
++   	return imgSize;
++   }
++}
++
+ // return how many clock tick interrupts have occurred
+ // since start.
+ int
+diff --git a/user.h b/user.h
+index 4f99c52..0d51d01 100644
+--- a/user.h
++++ b/user.h
+@@ -23,6 +23,7 @@ int getpid(void);
+ char* sbrk(int);
+ int sleep(int);
+ int uptime(void);
++int draw(void*, uint);
+ 
+ // ulib.c
+ int stat(const char*, struct stat*);
+diff --git a/usys.S b/usys.S
+index 8bfd8a1..d9be91e 100644
+--- a/usys.S
++++ b/usys.S
+@@ -29,3 +29,4 @@ SYSCALL(getpid)
+ SYSCALL(sbrk)
+ SYSCALL(sleep)
+ SYSCALL(uptime)
++SYSCALL(draw)
+-- 
+2.25.1
+
